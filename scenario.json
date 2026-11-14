@@ -1,0 +1,126 @@
+{
+  "id": "morning-brief",
+  "title": "Morning Brief",
+  "prompt": "Create a bounded morning brief from the requested calendar window and unread-message sample. Highlight schedule conflicts, preparation needs, and explicit email follow-ups.",
+  "instructions": "Use only the specified calendar window and one-page Gmail query. Read each returned Gmail message with get_message because list_messages contains summaries only. Mention the time window and message limit, avoid implying full-day or full-inbox coverage, and do not create events or respond to email. Separate confirmed schedule facts from suggested preparation.",
+  "fixture_summary": "Synthetic calendar window has two meetings, one requiring preparation. The bounded Gmail search returns one unread request tied to an agenda item.",
+  "inputs": {
+    "calendarId": "primary",
+    "timeMin": "2026-11-14T00:00:00Z",
+    "timeMax": "2026-11-15T00:00:00Z",
+    "query": "is:unread newer_than:2d",
+    "maxResults": 1
+  },
+  "steps": [
+    {
+      "id": "list_today_events",
+      "alias": "calendar",
+      "integration": "google-calendar",
+      "action": "list_events",
+      "tool": "calendar__list_events",
+      "arguments": {
+        "calendarId": "primary",
+        "timeMin": "2026-11-14T00:00:00Z",
+        "timeMax": "2026-11-15T00:00:00Z",
+        "maxResults": 5,
+        "singleEvents": true,
+        "orderBy": "startTime"
+      },
+      "records": [
+        {
+          "id": "event-demo-901",
+          "app": "Google Calendar",
+          "title": "Design review / mobile onboarding",
+          "detail": "Synthetic event, 10:00–10:30 UTC. Agenda pre-read is recommended.",
+          "url": "https://example.com/records/event-demo-901",
+          "event_id": "event-demo-901",
+          "start_at": "2026-11-14T10:00:00Z",
+          "end_at": "2026-11-14T10:30:00Z",
+          "prep_needed": true,
+          "conflict": false
+        },
+        {
+          "id": "event-demo-902",
+          "app": "Google Calendar",
+          "title": "Weekly team sync",
+          "detail": "Synthetic event, 15:00–15:30 UTC. No pre-read listed.",
+          "url": "https://example.com/records/event-demo-902",
+          "event_id": "event-demo-902",
+          "start_at": "2026-11-14T15:00:00Z",
+          "end_at": "2026-11-14T15:30:00Z",
+          "prep_needed": false,
+          "conflict": false
+        }
+      ]
+    },
+    {
+      "id": "search_unread",
+      "alias": "inbox",
+      "integration": "gmail",
+      "action": "list_messages",
+      "tool": "inbox__list_messages",
+      "arguments": {
+        "query": "is:unread newer_than:2d",
+        "maxResults": 1
+      },
+      "records": [
+        {
+          "id": "gmail-msg-morning-1",
+          "app": "Gmail",
+          "title": "Pre-read for onboarding design review",
+          "detail": "Summary: A teammate asks attendees to review a short flow before today’s design session.",
+          "url": "https://example.com/records/gmail-msg-morning-1",
+          "message_id": "gmail-msg-morning-1",
+          "received_at": "2026-11-14T07:10:00Z",
+          "action_required": true,
+          "related_event": "event-demo-901"
+        }
+      ]
+    },
+    {
+      "id": "read_morning_email",
+      "alias": "inbox",
+      "integration": "gmail",
+      "action": "get_message",
+      "tool": "inbox__get_message",
+      "arguments": {
+        "messageId": "gmail-msg-morning-1",
+        "format": "full"
+      },
+      "records": [
+        {
+          "id": "gmail-msg-morning-1",
+          "app": "Gmail",
+          "title": "Pre-read for onboarding design review",
+          "detail": "Full synthetic body: Please review the three-step mobile signup flow before the 10:00 UTC design review. No response is requested.",
+          "url": "https://example.com/records/gmail-msg-morning-1",
+          "message_id": "gmail-msg-morning-1",
+          "received_at": "2026-11-14T07:10:00Z",
+          "action_required": true,
+          "related_event": "event-demo-901",
+          "explicit_prep": true
+        }
+      ]
+    }
+  ],
+  "metrics": [
+    {
+      "name": "meetings_needing_preparation",
+      "op": "count",
+      "where": {
+        "prep_needed": true
+      }
+    },
+    {
+      "name": "returned_emails_with_explicit_action",
+      "op": "count",
+      "where": {
+        "explicit_prep": true
+      }
+    }
+  ],
+  "expected_metrics": {
+    "meetings_needing_preparation": 1,
+    "returned_emails_with_explicit_action": 1
+  }
+}
